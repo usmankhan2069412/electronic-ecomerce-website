@@ -31,8 +31,12 @@ export function ProtectedRoute({
 
   // Check admin requirements
   if (requireAdmin && !isAdmin) {
+    console.log("Admin access denied:", { requireAdmin, isAdmin, user: isAuthenticated ? "authenticated" : "not authenticated" });
     return <Navigate to="/" replace />;
   }
+  
+  // Log successful access to protected route
+  console.log("Protected route access granted:", { requireAuth, requireAdmin, isAuthenticated, isAdmin });
 
   // If all checks pass, render the child routes
   return <Outlet />;

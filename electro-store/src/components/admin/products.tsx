@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { useAuth } from "../../contexts/AuthContext";
+import { adminApi } from "@/services/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -32,33 +32,25 @@ export function AdminProducts() {
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        // In a real application, this would be an actual API call
-        // For now, we'll simulate the data
-        
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Mock data
-        const mockProducts = [
-          { id: 'p1', name: 'ElectroX Pro Smartphone', category: 'smartphones', price: 999.99, discount_price: 899.99, image: '/images/products/smartphone1.jpg', in_stock: true, is_new: true, is_featured: true },
-          { id: 'p2', name: 'SoundPods Pro', category: 'audio', price: 249.99, discount_price: 199.99, image: '/images/products/airpods1.jpg', in_stock: true, is_new: false, is_featured: true },
-          { id: 'p3', name: 'SmartWatch Ultra', category: 'wearables', price: 399.99, discount_price: 349.99, image: '/images/products/watch1.jpg', in_stock: true, is_new: true, is_featured: false },
-          { id: 'p4', name: 'SoundBeats Neckband', category: 'audio', price: 129.99, discount_price: 99.99, image: '/images/products/neckband1.jpg', in_stock: true, is_new: false, is_featured: false },
-          { id: 'p5', name: 'PowerMax 20000mAh', category: 'powerbanks', price: 79.99, discount_price: 59.99, image: '/images/products/powerbank1.jpg', in_stock: true, is_new: false, is_featured: true },
-        ];
-        
-        setProducts(mockProducts);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        setLoading(false);
-      }
-    };
-
     fetchProducts();
   }, []);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const response = await adminApi.getAllProducts();
+      setProducts(response.products);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load products",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleEditProduct = (product: Product) => {
     setCurrentProduct(product);
@@ -84,11 +76,8 @@ export function AdminProducts() {
   const handleDeleteProduct = async (productId: string) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
       try {
-        // In a real application, this would be an actual API call
-        // For now, we'll simulate the deletion
-        
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
+        setLoading(true);
+        await adminApi.deleteProduct(productId);
         
         // Remove product from state
         setProducts(products.filter(p => p.id !== productId));
@@ -104,6 +93,8 @@ export function AdminProducts() {
           description: "Failed to delete product",
           variant: "destructive"
         });
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -112,16 +103,15 @@ export function AdminProducts() {
     if (!currentProduct) return;
     
     try {
-      // In a real application, this would be an actual API call
-      // For now, we'll simulate the save
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      setLoading(true);
       
       if (isEditing) {
         // Update existing product
+        const response = await adminApi.updateProduct(currentProduct.id as string, currentProduct);
+        
+        // Update product in state
         setProducts(products.map(p => 
-          p.id === currentProduct.id ? { ...p, ...currentProduct } as Product : p
+          p.id === currentProduct.id ? response.product : p
         ));
         
         toast({
@@ -130,12 +120,10 @@ export function AdminProducts() {
         });
       } else {
         // Add new product
-        const newProduct = {
-          ...currentProduct,
-          id: `p${Date.now()}` // Generate a temporary ID
-        } as Product;
+        const response = await adminApi.createProduct(currentProduct);
         
-        setProducts([...products, newProduct]);
+        // Add new product to state
+        setProducts([...products, response.product]);
         
         toast({
           title: "Success",
@@ -151,6 +139,8 @@ export function AdminProducts() {
         description: "Failed to save product",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -165,6 +155,132 @@ export function AdminProducts() {
               type === 'number' ? parseFloat(value) : 
               value
     });
+  };
+
+  // Add a more detailed product form with additional fields
+  const renderProductForm = () => {
+    if (!currentProduct) return null;
+    
+    return (
+      <div className="grid gap-4 py-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label htmlFor="name" className="text-sm font-medium">Product Name</label>
+            <Input
+              id="name"
+              name="name"
+              value={currentProduct?.name || ''}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="category" className="text-sm font-medium">Category</label>
+            <Input
+              id="category"
+              name="category"
+              value={currentProduct?.category || ''}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label htmlFor="price" className="text-sm font-medium">Price</label>
+            <Input
+              id="price"
+              name="price"
+              type="number"
+              value={currentProduct?.price || 0}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="discount_price" className="text-sm font-medium">Discount Price (Optional)</label>
+            <Input
+              id="discount_price"
+              name="discount_price"
+              type="number"
+              value={currentProduct?.discount_price || 0}
+              onChange={handleInputChange}
+            />
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <label htmlFor="image" className="text-sm font-medium">Main Image URL</label>
+          <Input
+            id="image"
+            name="image"
+            value={currentProduct?.image || ''}
+            onChange={handleInputChange}
+            required
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <label htmlFor="description" className="text-sm font-medium">Description</label>
+          <textarea
+            id="description"
+            name="description"
+            value={currentProduct?.description || ''}
+            onChange={(e) => {
+              if (!currentProduct) return;
+              setCurrentProduct({
+                ...currentProduct,
+                description: e.target.value
+              });
+            }}
+            className="w-full p-2 border rounded-md"
+            rows={4}
+            required
+          />
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="in_stock"
+              name="in_stock"
+              checked={currentProduct?.in_stock || false}
+              onChange={handleInputChange}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <label htmlFor="in_stock" className="text-sm font-medium">In Stock</label>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="is_new"
+              name="is_new"
+              checked={currentProduct?.is_new || false}
+              onChange={handleInputChange}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <label htmlFor="is_new" className="text-sm font-medium">New</label>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="is_featured"
+              name="is_featured"
+              checked={currentProduct?.is_featured || false}
+              onChange={handleInputChange}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <label htmlFor="is_featured" className="text-sm font-medium">Featured</label>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -268,101 +384,7 @@ export function AdminProducts() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium">Product Name</label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={currentProduct?.name || ''}
-                  onChange={handleInputChange}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label htmlFor="category" className="text-sm font-medium">Category</label>
-                <Input
-                  id="category"
-                  name="category"
-                  value={currentProduct?.category || ''}
-                  onChange={handleInputChange}
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="price" className="text-sm font-medium">Price</label>
-                <Input
-                  id="price"
-                  name="price"
-                  type="number"
-                  value={currentProduct?.price || 0}
-                  onChange={handleInputChange}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label htmlFor="discount_price" className="text-sm font-medium">Discount Price (Optional)</label>
-                <Input
-                  id="discount_price"
-                  name="discount_price"
-                  type="number"
-                  value={currentProduct?.discount_price || 0}
-                  onChange={handleInputChange}
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="image" className="text-sm font-medium">Image URL</label>
-              <Input
-                id="image"
-                name="image"
-                value={currentProduct?.image || ''}
-                onChange={handleInputChange}
-              />
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="in_stock"
-                  name="in_stock"
-                  checked={currentProduct?.in_stock || false}
-                  onChange={handleInputChange}
-                  className="h-4 w-4 rounded border-gray-300"
-                />
-                <label htmlFor="in_stock" className="text-sm font-medium">In Stock</label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="is_new"
-                  name="is_new"
-                  checked={currentProduct?.is_new || false}
-                  onChange={handleInputChange}
-                  className="h-4 w-4 rounded border-gray-300"
-                />
-                <label htmlFor="is_new" className="text-sm font-medium">New</label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="is_featured"
-                  name="is_featured"
-                  checked={currentProduct?.is_featured || false}
-                  onChange={handleInputChange}
-                  className="h-4 w-4 rounded border-gray-300"
-                />
-                <label htmlFor="is_featured" className="text-sm font-medium">Featured</label>
-              </div>
-            </div>
-          </div>
+          {renderProductForm()}
           
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>

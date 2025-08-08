@@ -73,7 +73,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Login function
   const login = async (username: string, password: string) => {
     try {
-      const response = await axios.post(`${API_URL}/auth/login`, { username, password });
+      // Ensure username is trimmed to remove any leading/trailing whitespace
+      const trimmedUsername = username.trim();
+      const response = await axios.post(`${API_URL}/auth/login`, { username: trimmedUsername, password });
       const { token: newToken, user: userData } = response.data;
       
       // Save token to localStorage
@@ -83,6 +85,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Set default auth header
       axios.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
+      
+      // Return the user data so the login page can check the role
+      return userData;
     } catch (error) {
       console.error("Login failed:", error);
       throw error;
@@ -122,6 +127,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check if user is admin
   const isAdmin = user?.role === "admin";
+  
+  // For debugging
+  useEffect(() => {
+    if (user) {
+      console.log("Current user:", user);
+      console.log("User role:", user.role);
+      console.log("Is admin:", isAdmin);
+    }
+  }, [user, isAdmin]);
 
   // Context value
   const value = {

@@ -8,8 +8,9 @@ import { Card, CardContent } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { ProductRatingComponent } from "./product-rating";
 import { useToast } from "./ui/toast-context";
-import axios from "axios";
+import { productApi } from "@/services/api";
 import { Heart, ShoppingCart, Check } from "lucide-react";
+import api from "@/services/api";
 
 interface Product {
   id: string;
@@ -43,6 +44,7 @@ export function ProductDetailPage() {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isAddingToWishlist, setIsAddingToWishlist] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -50,27 +52,26 @@ export function ProductDetailPage() {
       
       try {
         setLoading(true);
-        
-        // In a real application, this would be an actual API call
-        // For now, we'll simulate the data fetch with a delay
-        await new Promise(resolve => setTimeout(resolve, 500));
+        setError(false);
         
         // Fetch product from API
-        const response = await axios.get(`/api/products/${id}`);
-        const productData = response.data.product;
+        const productData = await productApi.getProduct(id);
         
-        setProduct(productData);
-        setSelectedImage(productData.image);
-        if (productData.colors && productData.colors.length > 0) {
-          setSelectedColor(productData.colors[0]);
+        setProduct(productData.product);
+        setSelectedImage(productData.product.image);
+        if (productData.product.colors && productData.product.colors.length > 0) {
+          setSelectedColor(productData.product.colors[0]);
         }
         
         // Fetch related products
-        const relatedResponse = await axios.get(`/api/products/related/${id}`);
-        setRelatedProducts(relatedResponse.data.products);
+        const relatedResponse = await productApi.getProducts({ category: productData.product.category });
+        // Filter out the current product from related products
+        const filteredRelated = relatedResponse.products.filter(p => p.id !== id);
+        setRelatedProducts(filteredRelated.slice(0, 4)); // Limit to 4 related products
         
       } catch (error) {
         console.error("Error fetching product:", error);
+        setError(true);
         toast({
           title: "Error",
           description: "Failed to load product details",
@@ -122,8 +123,8 @@ export function ProductDetailPage() {
     try {
       setIsAddingToWishlist(true);
       
-      // In a real application, this would be an actual API call
-      await axios.post("/api/orders/wishlist", {
+      // API call to add to wishlist
+      await api.post("/orders/wishlist", {
         product_id: product.id
       });
       
@@ -152,17 +153,32 @@ export function ProductDetailPage() {
 
   if (loading) {
     return (
-      <div className="container py-10 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="container py-10 flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
+        <p className="text-gray-500">Loading product details...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container py-10 flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="text-red-500 text-5xl mb-4">⚠️</div>
+        <h1 className="text-2xl font-bold mb-2">Error loading product</h1>
+        <p className="text-gray-600 mb-6">There was a problem fetching the product details.</p>
+        <div className="flex gap-4">
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
+          <Button variant="outline" onClick={() => navigate("/products")}>Back to Products</Button>
+        </div>
       </div>
     );
   }
 
   if (!product) {
     return (
-      <div className="container py-10">
+      <div className="container py-10 flex flex-col items-center justify-center min-h-[60vh]">
         <h1 className="text-2xl font-bold mb-4">Product not found</h1>
-        <p className="mb-6">The product you are looking for does not exist or has been removed.</p>
+        <p className="mb-6 text-gray-600">The product you are looking for does not exist or has been removed.</p>
         <Button onClick={() => navigate("/products")}>Back to Products</Button>
       </div>
     );

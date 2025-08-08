@@ -1,9 +1,7 @@
-from flask_sqlalchemy import SQLAlchemy
+from ..extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
 import datetime
 import uuid
-
-db = SQLAlchemy()
 
 class User(db.Model):
     __tablename__ = 'users'

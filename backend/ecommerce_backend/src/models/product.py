@@ -2,8 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 import datetime
 import uuid
-
-db = SQLAlchemy()
+from ..extensions import db
 
 class Product(db.Model):
     __tablename__ = 'products'

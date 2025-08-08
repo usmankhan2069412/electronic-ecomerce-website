@@ -1,8 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 import datetime
 import uuid
-
-db = SQLAlchemy()
+from ..extensions import db
 
 class Order(db.Model):
     __tablename__ = 'orders'

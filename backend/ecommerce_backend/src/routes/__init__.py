@@ -4,3 +4,4 @@ from .user import user_bp
 from .order import order_bp
 from .payment import payment_bp
 from .rating import rating_bp
+from .product import product_bp

@@ -27,12 +27,20 @@ export function LoginPage() {
     setIsLoading(true);
 
     try {
-      await login(formData.username, formData.password);
+      // Trim the username to remove any leading/trailing whitespace
+      const trimmedUsername = formData.username.trim();
+      const userData = await login(trimmedUsername, formData.password);
       toast({
         title: "Success",
         description: "You have been logged in successfully"
       });
-      navigate("/");
+      
+      // Check if user is admin and redirect accordingly
+      if (userData?.role === "admin") {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/");
+      }
     } catch (error: any) {
       toast({
         title: "Error",

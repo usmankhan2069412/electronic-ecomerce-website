@@ -54,7 +54,7 @@ export function Header() {
           <Link to="/" className="text-sm font-medium hover:text-primary transition-colors">Home</Link>
           <Link to="/products" className="text-sm font-medium hover:text-primary transition-colors">Products</Link>
           {isAdmin && (
-            <Link to="/admin" className="text-sm font-medium hover:text-primary transition-colors">Admin Panel</Link>
+            <Link to="/admin/dashboard" className="text-sm font-medium hover:text-primary transition-colors">Admin Panel</Link>
           )}
         </nav>
 
@@ -97,7 +97,7 @@ export function Header() {
                   </DropdownMenuItem>
                   {isAdmin && (
                     <DropdownMenuItem asChild>
-                      <Link to="/admin">Admin Panel</Link>
+                      <Link to="/admin/dashboard">Admin Panel</Link>
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
@@ -133,7 +133,7 @@ export function Header() {
             <Link to="/" className="text-sm font-medium" onClick={toggleMenu}>Home</Link>
             <Link to="/products" className="text-sm font-medium" onClick={toggleMenu}>Products</Link>
             {isAdmin && (
-              <Link to="/admin" className="text-sm font-medium" onClick={toggleMenu}>Admin Panel</Link>
+              <Link to="/admin/dashboard" className="text-sm font-medium" onClick={toggleMenu}>Admin Panel</Link>
             )}
             
             <div className="h-px bg-border my-2" />

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { useAuth } from "../../contexts/AuthContext";
+import { adminApi } from "@/services/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -28,33 +28,25 @@ export function AdminCategories() {
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        // In a real application, this would be an actual API call
-        // For now, we'll simulate the data
-        
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Mock data
-        const mockCategories = [
-          { id: 'c1', name: 'Smartphones', image: '/images/categories/smartphones.jpg', description: 'Latest smartphones with cutting-edge technology' },
-          { id: 'c2', name: 'Audio', image: '/images/categories/audio.jpg', description: 'High-quality audio devices for immersive sound experience' },
-          { id: 'c3', name: 'Wearables', image: '/images/categories/wearables.jpg', description: 'Smart wearable devices to track your fitness and health' },
-          { id: 'c4', name: 'Power Banks', image: '/images/categories/powerbanks.jpg', description: 'Portable power solutions for your devices on the go' },
-          { id: 'c5', name: 'Accessories', image: '/images/categories/accessories.jpg', description: 'Essential accessories for your electronic devices' },
-        ];
-        
-        setCategories(mockCategories);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-        setLoading(false);
-      }
-    };
-
     fetchCategories();
   }, []);
+
+  const fetchCategories = async () => {
+    try {
+      setLoading(true);
+      const response = await adminApi.getAllCategories();
+      setCategories(response.categories);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load categories",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleEditCategory = (category: Category) => {
     setCurrentCategory({...category});
@@ -75,11 +67,8 @@ export function AdminCategories() {
   const handleDeleteCategory = async (categoryId: string) => {
     if (window.confirm("Are you sure you want to delete this category?")) {
       try {
-        // In a real application, this would be an actual API call
-        // For now, we'll simulate the deletion
-        
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
+        setLoading(true);
+        await adminApi.deleteCategory(categoryId);
         
         // Remove category from state
         setCategories(categories.filter(c => c.id !== categoryId));
@@ -95,6 +84,8 @@ export function AdminCategories() {
           description: "Failed to delete category",
           variant: "destructive"
         });
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -103,16 +94,15 @@ export function AdminCategories() {
     if (!currentCategory) return;
     
     try {
-      // In a real application, this would be an actual API call
-      // For now, we'll simulate the save
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      setLoading(true);
       
       if (isEditing) {
         // Update existing category
+        const response = await adminApi.updateCategory(currentCategory.id as string, currentCategory);
+        
+        // Update category in state
         setCategories(categories.map(c => 
-          c.id === currentCategory.id ? { ...c, ...currentCategory } as Category : c
+          c.id === currentCategory.id ? response.category : c
         ));
         
         toast({
@@ -121,12 +111,10 @@ export function AdminCategories() {
         });
       } else {
         // Add new category
-        const newCategory = {
-          ...currentCategory,
-          id: `c${Date.now()}` // Generate a temporary ID
-        } as Category;
+        const response = await adminApi.createCategory(currentCategory);
         
-        setCategories([...categories, newCategory]);
+        // Add new category to state
+        setCategories([...categories, response.category]);
         
         toast({
           title: "Success",
@@ -142,6 +130,8 @@ export function AdminCategories() {
         description: "Failed to save category",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 

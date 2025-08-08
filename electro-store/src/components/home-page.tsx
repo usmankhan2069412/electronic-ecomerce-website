@@ -1,13 +1,68 @@
 import * as React from "react"
+import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { ChevronRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Carousel, CarouselItem } from "@/components/ui/carousel"
 import { ProductCard } from "@/components/product-card"
-import { categories, featuredProducts, newProducts } from "@/lib/data"
+import { HeroCarousel } from "./hero-carousel"
+import { CategoryCard } from "@/components/category-card"
+import { Carousel, CarouselItem } from "@/components/ui/carousel"
+import { productApi } from "@/services/api"
 
 export function HomePage() {
+  const [featuredProducts, setFeaturedProducts] = useState([])
+  const [newProducts, setNewProducts] = useState([])
+  const [categories, setCategories] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [categoriesLoading, setCategoriesLoading] = useState(true)
+  const [error, setError] = useState(false)
+  const [categoriesError, setCategoriesError] = useState(false)
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true)
+        setError(false)
+        
+        // Use relative URL instead of absolute URL
+        const featuredResponse = await productApi.getProducts({ featured: true })
+        setFeaturedProducts(featuredResponse?.products || [])
+        
+        // Use relative URL instead of absolute URL
+        const newResponse = await productApi.getProducts({ new: true })
+        setNewProducts(newResponse?.products || [])
+      } catch (err) {
+        console.error('Error fetching products:', err)
+        setError(true)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchProducts()
+  }, [])
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setCategoriesLoading(true)
+        setCategoriesError(false)
+        
+        // Fetch categories
+        const response = await productApi.getCategories()
+        setCategories(response?.categories || [])
+      } catch (err) {
+        console.error('Error fetching categories:', err)
+        setCategoriesError(true)
+      } finally {
+        setCategoriesLoading(false)
+      }
+    }
+    
+    fetchCategories()
+  }, [])
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
@@ -109,27 +164,33 @@ export function HomePage() {
             </Link>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {categories.map((category) => (
-              <Link 
-                key={category.id} 
-                to={`/categories/${category.id}`}
-                className="group"
-              >
-                <div className="bg-white rounded-lg shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md">
-                  <div className="aspect-square relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
-                    <img 
-                      src={category.image} 
-                      alt={category.name} 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                    <h3 className="absolute bottom-3 left-3 right-3 text-white font-medium z-20">
-                      {category.name}
-                    </h3>
+            {categoriesLoading ? (
+              // Show skeleton loaders while loading
+              Array(5).fill(0).map((_, index) => (
+                <div key={index} className="bg-white rounded-lg shadow-sm overflow-hidden animate-pulse">
+                  <div className="aspect-square relative overflow-hidden bg-gray-300">
+                    <div className="absolute bottom-3 left-3 right-3 h-4 bg-gray-400 rounded"></div>
                   </div>
                 </div>
-              </Link>
-            ))}
+              ))
+            ) : categoriesError ? (
+              <div className="col-span-full text-center py-10">
+                <p className="text-red-500">Failed to load categories. Please try again later.</p>
+              </div>
+            ) : categories.length === 0 ? (
+              <div className="col-span-full text-center py-10">
+                <p className="text-gray-500">No categories available.</p>
+              </div>
+            ) : (
+              categories.map((category) => (
+                <CategoryCard key={category._id} category={{
+                  id: category._id,
+                  name: category.name,
+                  image: category.image,
+                  description: category.description
+                }} />
+              ))
+            )}
           </div>
         </div>
       </section>
@@ -144,9 +205,34 @@ export function HomePage() {
             </Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+            {loading ? (
+              // Show skeleton loaders while loading
+              Array(4).fill(0).map((_, index) => (
+                <div key={index} className="rounded-lg overflow-hidden shadow-md animate-pulse">
+                  <div className="bg-gray-300 h-48 w-full"></div>
+                  <div className="p-4 space-y-3">
+                    <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+                    <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+                    <div className="h-8 bg-gray-300 rounded w-full mt-2"></div>
+                  </div>
+                </div>
+              ))
+            ) : error ? (
+              <div className="col-span-full text-center py-10">
+                <p className="text-red-500">Failed to load products. Please try again later.</p>
+              </div>
+            ) : featuredProducts.length === 0 ? (
+              <div className="col-span-full text-center py-10">
+                <p className="text-gray-500">No featured products available.</p>
+              </div>
+            ) : (
+              featuredProducts.map((product) => (
+                <ProductCard key={product._id} product={{
+                  ...product,
+                  id: product._id
+                }} />
+              ))
+            )}
           </div>
         </div>
       </section>
@@ -161,9 +247,34 @@ export function HomePage() {
             </Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {newProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+            {loading ? (
+              // Show skeleton loaders while loading
+              Array(4).fill(0).map((_, index) => (
+                <div key={index} className="rounded-lg overflow-hidden shadow-md animate-pulse">
+                  <div className="bg-gray-300 h-48 w-full"></div>
+                  <div className="p-4 space-y-3">
+                    <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+                    <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+                    <div className="h-8 bg-gray-300 rounded w-full mt-2"></div>
+                  </div>
+                </div>
+              ))
+            ) : error ? (
+              <div className="col-span-full text-center py-10">
+                <p className="text-red-500">Failed to load products. Please try again later.</p>
+              </div>
+            ) : newProducts.length === 0 ? (
+              <div className="col-span-full text-center py-10">
+                <p className="text-gray-500">No new products available.</p>
+              </div>
+            ) : (
+              newProducts.map((product) => (
+                <ProductCard key={product._id} product={{
+                  ...product,
+                  id: product._id
+                }} />
+              ))
+            )}
           </div>
         </div>
       </section>

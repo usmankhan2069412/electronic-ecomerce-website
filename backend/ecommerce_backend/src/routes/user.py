@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from src.models import User, db
-from src.routes.auth import token_required, admin_required
+from src.routes.decorators import token_required, admin_required
 
 user_bp = Blueprint('user', __name__)
 

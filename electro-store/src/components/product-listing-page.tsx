@@ -1,28 +1,60 @@
 import * as React from "react"
+import { useState, useEffect } from "react"
 import { useSearchParams, Link } from "react-router-dom"
 import { Filter, SlidersHorizontal, ChevronDown, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { ProductCard } from "@/components/product-card"
-import { products, categories } from "@/lib/data"
+import { productApi } from "@/services/api"
 
 export function ProductListingPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [isFilterOpen, setIsFilterOpen] = React.useState(false)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [products, setProducts] = useState([])
+  const [categories, setCategories] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   
   // Get filter values from URL
   const categoryFilter = searchParams.get('category') || 'all'
   const sortBy = searchParams.get('sort') || 'featured'
   const priceRange = searchParams.get('price') || 'all'
   
+  // Fetch products and categories
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        setError(false)
+        
+        // Fetch products with filters
+        const filters = {}
+        if (categoryFilter !== 'all') {
+          filters.category = categoryFilter
+        }
+        
+        const productsResponse = await productApi.getProducts(filters)
+        setProducts(productsResponse.products)
+        
+        // Fetch categories
+        const categoriesResponse = await productApi.getCategories()
+        setCategories(categoriesResponse.categories)
+      } catch (err) {
+        console.error('Error fetching data:', err)
+        setError(true)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchData()
+  }, [categoryFilter])
+  
   // Filter products based on criteria
   const filteredProducts = React.useMemo(() => {
-    let result = [...products]
+    if (loading || error) return []
     
-    // Filter by category
-    if (categoryFilter !== 'all') {
-      result = result.filter(product => product.category === categoryFilter)
-    }
+    let result = [...products]
     
     // Filter by price range
     if (priceRange !== 'all') {
@@ -55,7 +87,7 @@ export function ProductListingPage() {
     }
     
     return result
-  }, [categoryFilter, sortBy, priceRange])
+  }, [products, categoryFilter, sortBy, priceRange, loading, error])
   
   // Update filters
   const updateFilter = (key: string, value: string) => {
@@ -282,7 +314,26 @@ export function ProductListingPage() {
         )}
         
         {/* Product Grid */}
-        {filteredProducts.length === 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, index) => (
+              <div key={index} className="bg-gray-100 rounded-lg h-80 animate-pulse">
+                <div className="bg-gray-200 h-48 rounded-t-lg"></div>
+                <div className="p-4 space-y-3">
+                  <div className="bg-gray-200 h-4 rounded w-3/4"></div>
+                  <div className="bg-gray-200 h-4 rounded w-1/2"></div>
+                  <div className="bg-gray-200 h-4 rounded w-1/4"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : error ? (
+          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+            <h2 className="text-xl font-medium mb-2">Error loading products</h2>
+            <p className="text-gray-600 mb-4">There was a problem fetching the products. Please try again later.</p>
+            <Button onClick={() => window.location.reload()}>Refresh Page</Button>
+          </div>
+        ) : filteredProducts.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm p-8 text-center">
             <h2 className="text-xl font-medium mb-2">No products found</h2>
             <p className="text-gray-600 mb-4">Try adjusting your filters to find what you're looking for.</p>
